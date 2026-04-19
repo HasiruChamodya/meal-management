@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 const API_BASE = `${import.meta.env.VITE_API_BASE || "http://localhost:5050/api"}/recipes`;
 
+// Helper function to get auth headers with token from sessionStorage for API requests
 const getAuthHeaders = () => {
   const token = sessionStorage.getItem("token");
   return {
@@ -22,7 +23,7 @@ const getAuthHeaders = () => {
   };
 };
 
-// 👇 Mapping to enforce base unit entry for bulk items
+// Mapping to enforce base unit entry for bulk items
 const UNIT_TO_BASE_LABEL = {
   "Kg": "g (Grams)",
   "g": "g (Grams)",
@@ -34,7 +35,7 @@ const getBaseUnitLabel = (displayUnit) => {
   return UNIT_TO_BASE_LABEL[displayUnit] || displayUnit;
 };
 
-// 👇 New helper to display the correct short unit in the table and form box
+// Helper function to display the correct short unit in the table and form box
 const getBaseUnitShort = (displayUnit) => {
   if (!displayUnit) return "";
   const map = {
@@ -44,24 +45,20 @@ const getBaseUnitShort = (displayUnit) => {
   return map[displayUnit] || displayUnit;
 };
 
+// Main component for managing recipes and their ingredients, allowing admins to create, edit, and delete recipes and ingredients with a user-friendly interface. It includes dialogs for adding/editing recipes and ingredients, as well as a searchable dropdown for selecting items when adding/editing ingredients.
 const AdminRecipes = () => {
   const { toast } = useToast();
-
-  const [recipes, setRecipes] = useState([]);
-  const [selectedRecipeId, setSelectedRecipeId] = useState("");
-  const [ingredients, setIngredients] = useState([]);
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const [recipeDialogOpen, setRecipeDialogOpen] = useState(false);
-  const [ingredientDialogOpen, setIngredientDialogOpen] = useState(false);
-  const [ingredientSearchOpen, setIngredientSearchOpen] = useState(false); 
-
-  const [editingRecipe, setEditingRecipe] = useState(null);
-  const [newRecipe, setNewRecipe] = useState({ recipeKey: "", name: "" });
-
-  const [ingredientForm, setIngredientForm] = useState({
-    itemId: "",
+  const [recipes, setRecipes] = useState([]); // List of all recipes
+  const [selectedRecipeId, setSelectedRecipeId] = useState(""); // ID of the currently selected recipe
+  const [ingredients, setIngredients] = useState([]); // List of ingredients for the selected recipe
+  const [items, setItems] = useState([]); // List of all items available for selection as ingredients
+  const [loading, setLoading] = useState(true); // Loading state for API calls
+  const [recipeDialogOpen, setRecipeDialogOpen] = useState(false); // State to control visibility of the recipe add/edit dialog
+  const [ingredientDialogOpen, setIngredientDialogOpen] = useState(false); // State to control visibility of the ingredient add/edit dialog
+  const [ingredientSearchOpen, setIngredientSearchOpen] = useState(false);  // State to control visibility of the ingredient search dropdown
+  const [editingRecipe, setEditingRecipe] = useState(null); // State to hold the recipe being edited, null when adding a new recipe
+  const [newRecipe, setNewRecipe] = useState({ recipeKey: "", name: "" }); // State to hold the form data for adding/editing a recipe
+  const [ingredientForm, setIngredientForm] = useState({itemId: "",
     normPerPatient: 0,
     unit: "g",
     editId: null,

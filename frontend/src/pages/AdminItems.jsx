@@ -1,3 +1,5 @@
+//  Admin interface for managing items
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,20 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
-} from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Trash2, Edit2, FolderPlus } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5050/api";
 
+// Helper function to get authorization headers with JWT token from session storage
 const getAuthHeaders = () => {
   const token = sessionStorage.getItem("token");
   return {
@@ -27,72 +24,82 @@ const getAuthHeaders = () => {
   };
 };
 
+// Default units for items, can be extended by the user
 const DEFAULT_UNITS = [
   "Kg", "g", "One", "1 loaf", "Cup", "Bottle", "Pk",
   "100g", "400g", "L", "180ml", "375ml", "Pcs", "Fruit", "Pkt",
 ];
 
+// Main component for managing items and categories
 const AdminItems = () => {
-  const { toast } = useToast();
+  const { toast } = useToast(); // For showing success/error messages
+  const [categories, setCategories] = useState([]); // List of item categories
+  const [selectedCat, setSelectedCat] = useState(null); // Currently selected category for filtering items
+  const [items, setItems] = useState([]); // List of all items
+  const [units, setUnits] = useState([...DEFAULT_UNITS]); // List of measurement units, can be extended by user
+  const [dietCycles, setDietCycles] = useState([]); // List of diet cycles for protein items
+  const [loading, setLoading] = useState(true); // Track if data is loading  
+  const [saving, setSaving] = useState(false); // Track if save operation is in progress
+  const [itemDialogOpen, setItemDialogOpen] = useState(false); // Control visibility of add/edit item dialog
+  const [newItem, setNewItem] = useState({}); // Form state for new/edit item, structure: { nameEn, nameSi, unit, defaultPrice, categoryId, isProtein, dietCycle, isVegetable, vegCategory, isExtra, calcType }
+  const [editingItem, setEditingItem] = useState(null); // If editing an existing item, this holds the original item data for reference
+  const [isProteinOn, setIsProteinOn] = useState(false); // Separate state for protein switch to handle conditional logic in the form
+  const [isVegOn, setIsVegOn] = useState(false); // Separate state for vegetable switch to handle conditional logic in the form
+  const [isExtraOn, setIsExtraOn] = useState(false); // Separate state for extra item switch to handle conditional logic in the form
+  const [dietCycle, setDietCycle] = useState(""); // Selected diet cycle for protein items, stored separately for easier handling in the form
+  const [catDialogOpen, setCatDialogOpen] = useState(false); // Control visibility of add/edit category dialog
+  const [catForm, setCatForm] = useState({ name: "" }); // Form state for category dialog, structure: { name }
+  const [editingCat, setEditingCat] = useState(null); // If editing an existing category, this holds the original category data for reference
+  const [deleteCatDialog, setDeleteCatDialog] = useState(null); // Control visibility of delete category confirmation dialog, holds the category to be deleted
+  const [unitDialogOpen, setUnitDialogOpen] = useState(false); // Control visibility of add custom unit dialog
+  const [newUnit, setNewUnit] = useState(""); // Form state for new custom unit, just a string input
 
-  const [categories, setCategories] = useState([]);
-  const [selectedCat, setSelectedCat] = useState(null);
-  const [items, setItems] = useState([]);
-  const [units, setUnits] = useState([...DEFAULT_UNITS]);
-  const [dietCycles, setDietCycles] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  const [itemDialogOpen, setItemDialogOpen] = useState(false);
-  const [newItem, setNewItem] = useState({});
-  const [editingItem, setEditingItem] = useState(null);
-  const [isProteinOn, setIsProteinOn] = useState(false);
-  const [isVegOn, setIsVegOn] = useState(false);
-  const [isExtraOn, setIsExtraOn] = useState(false);
-  const [dietCycle, setDietCycle] = useState("");
-
-  const [catDialogOpen, setCatDialogOpen] = useState(false);
-  const [catForm, setCatForm] = useState({ name: "" });
-  const [editingCat, setEditingCat] = useState(null);
-
-  const [deleteCatDialog, setDeleteCatDialog] = useState(null);
-
-  const [unitDialogOpen, setUnitDialogOpen] = useState(false);
-  const [newUnit, setNewUnit] = useState("");
-
+  // Fetch categories from API
   const fetchCategories = async () => {
     try {
-      const res = await fetch(`${API_BASE}/categories`, { headers: getAuthHeaders() });
+      const res = await fetch(`${API_BASE}/categories`, { headers: getAuthHeaders() }); 
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch categories");
-      setCategories(data.categories || []);
-    } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      setCategories(data.categories || []); 
+    } 
+    catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" });
     }
   };
 
+  // Fetch items from API
   const fetchItems = async () => {
     try {
       const res = await fetch(`${API_BASE}/items`, { headers: getAuthHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch items");
       setItems(data.items || []);
-    } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } 
+    catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" });
     }
   };
 
+  // Fetch diet cycles from API
   const fetchDietCycles = async () => {
     try {
       const res = await fetch(`${API_BASE}/diet-cycles`, { headers: getAuthHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch diet cycles");
       setDietCycles((data.cycles || []).filter((c) => c.active));
-    } catch (error) {
+    } 
+    catch (error) {
       console.error("Failed to fetch diet cycles:", error);
     }
   };
 
+  // Fetch all necessary data on component mount
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true);
@@ -102,19 +109,22 @@ const AdminItems = () => {
     loadAll();
   }, []);
 
+  // Filter items based on selected category, if any
   const filtered = selectedCat
     ? items.filter((i) => i.categoryId === selectedCat)
     : items;
 
-  // 👇 Added sorting logic: Alphabetical by English name
+  // Sorting logic: Alphabetical by English name
   const sortedItems = [...filtered].sort((a, b) => {
     return (a.nameEn || "").localeCompare(b.nameEn || "");
   });
 
+  // Generate vegetable category options based on existing categories and items
   const vegCatOptions = (() => {
     const options = new Map();
     const vegKeywords = ["vegetable", "palaa", "gedi", "piti", "pishta", "elawalu"];
     
+    // add categories that have vegetable-related keywords in their name
     for (const cat of categories) {
       const nameLower = (cat.name || "").toLowerCase();
       if (vegKeywords.some((kw) => nameLower.includes(kw))) {
@@ -129,6 +139,7 @@ const AdminItems = () => {
       }
     }
 
+    // add veg categories from items that are not already included from categories
     for (const item of items) {
       if (item.vegCategory && !options.has(item.vegCategory)) {
         options.set(item.vegCategory, {
@@ -138,6 +149,7 @@ const AdminItems = () => {
       }
     }
 
+    // add a default "other" category if no vegetable categories are found
     if (options.size === 0) {
       options.set("other", { value: "other", label: "Other" });
     }
@@ -145,27 +157,31 @@ const AdminItems = () => {
     return Array.from(options.values());
   })();
 
+  // Open dialog for adding a new category with empty form
   const openAddCategory = () => {
     setEditingCat(null);
     setCatForm({ name: "" });
     setCatDialogOpen(true);
   };
 
+  // Open dialog for editing an existing category, pre-filling the form with the category's current name
   const openEditCategory = (cat) => {
     setEditingCat(cat);
     setCatForm({ name: cat.name });
     setCatDialogOpen(true);
   };
 
+  // Save category (both add and edit)
   const saveCategory = async () => {
     if (!catForm.name?.trim()) return;
     try {
       setSaving(true);
-      const url = editingCat
+      const url = editingCat // If editing, use the category's ID in the URL; if adding, use the base categories endpoint
         ? `${API_BASE}/categories/${editingCat.id}`
         : `${API_BASE}/categories`;
       const method = editingCat ? "PUT" : "POST";
 
+      // Make API request to save the category with the name from the form, trimming whitespace
       const res = await fetch(url, {
         method,
         headers: getAuthHeaders(),
@@ -180,31 +196,47 @@ const AdminItems = () => {
       });
       setCatDialogOpen(false);
       fetchCategories();
-    } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
+    } 
+    catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" });
+    } 
+    finally {
       setSaving(false);
     }
   };
 
+  // Delete category after confirming with the user, ensuring that any items in that category are handled appropriately
   const deleteCategory = async (cat) => {
     try {
       const res = await fetch(`${API_BASE}/categories/${cat.id}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to delete category");
 
-      toast({ title: "Category Deleted", description: `${cat.name} removed` });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to delete category"); // The API should return an error if there are active items in this category, so we can show that message to the user
+
+      toast({ 
+        title: "Category Deleted", 
+        description: `${cat.name} removed` });
+      
+      // Close the delete confirmation dialog and if the deleted category was currently selected for filtering, reset the filter to show all items. Then refresh the categories list to reflect the deletion.
       setDeleteCatDialog(null);
       if (selectedCat === cat.id) setSelectedCat(null);
       fetchCategories();
-    } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } 
+    catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" });
     }
   };
 
+  // Helper function to create an empty item object with default values, used when opening the add item dialog. It takes an optional categoryId parameter to pre-fill the category for the new item based on the current selection or defaults to the first category if available. The structure of the item includes all necessary fields for the form, such as name, unit, price, category, and flags for protein/vegetable/extra status. This ensures that when the add item dialog is opened, the form is initialized with a consistent structure and sensible defaults.
   const emptyItem = (categoryId) => ({
     nameEn: "", nameSi: "", unit: "Kg", defaultPrice: 0,
     categoryId: categoryId || selectedCat || (categories[0]?.id) || 1,
@@ -212,6 +244,7 @@ const AdminItems = () => {
     vegCategory: null, isExtra: false, calcType: "norm_weight",
   });
 
+  // Open dialog for adding a new item, initializing the form with default values and resetting any editing state. It also sets the protein/vegetable/extra switches to off and defaults the diet cycle selection to the first available cycle if there are any. This prepares the form for creating a new item without any residual data from previous edits.
   const openItemDialog = (catId) => {
     setEditingItem(null);
     setNewItem(emptyItem(catId));
@@ -222,6 +255,7 @@ const AdminItems = () => {
     setItemDialogOpen(true);
   };
 
+  // Open dialog for editing an existing item, pre-filling the form with the item's current data. It also sets the protein/vegetable/extra switches based on the item's properties and defaults the diet cycle selection to the item's current diet cycle or the first available cycle if there are any. This allows for seamless editing of an item with all relevant data pre-populated in the form.
   const openEditItem = (item) => {
     setEditingItem(item);
     setNewItem({
@@ -240,6 +274,7 @@ const AdminItems = () => {
     setItemDialogOpen(true);
   };
 
+  // Handle item deletion with user confirmation, making an API call to delete the item and refreshing the items list upon success. It also shows appropriate success or error messages based on the outcome of the API call.
   const handleDeleteItem = async (item) => {
     if (!window.confirm(`Delete "${item.nameSi} / ${item.nameEn}"? This will deactivate the item.`)) return;
     try {
@@ -249,13 +284,20 @@ const AdminItems = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to delete item");
-      toast({ title: "Item Removed", description: `${item.nameEn} deactivated` });
+      toast({ 
+        title: "Item Removed", 
+        description: `${item.nameEn} deactivated` });
       fetchItems();
-    } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } 
+    catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" });
     }
   };
 
+  // Handle saving an item (both add and edit) by making an API call with the form data. It constructs the payload based on the form state, including conditional fields for protein/vegetable/extra items. After a successful save, it shows a success message, closes the dialog, and refreshes the items list. If there's an error during the API call, it shows an error message to the user.
   const handleSaveItem = async () => {
     if (!newItem.nameEn?.trim() || !newItem.nameSi?.trim()) return;
     try {
@@ -277,11 +319,14 @@ const AdminItems = () => {
       const url = editingItem ? `${API_BASE}/items/${editingItem.id}` : `${API_BASE}/items`;
       const method = editingItem ? "PUT" : "POST";
 
+      // Make API request to save the item with the data from the form, trimming whitespace from the names
       const res = await fetch(url, {
         method,
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
+
+      // Parse response and check for errors, showing appropriate messages to the user based on the outcome
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to save item");
 
@@ -293,21 +338,31 @@ const AdminItems = () => {
       setItemDialogOpen(false);
       setEditingItem(null);
       fetchItems();
-    } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
+    } 
+    catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" });
+    } 
+    finally {
       setSaving(false);
     }
   };
 
+  // Handle adding a new custom unit to the units list, ensuring that it is not empty and does not already exist in the list. It shows appropriate success or error messages based on the outcome and resets the form state after adding the unit.
   const addCustomUnit = () => {
     if (!newUnit.trim()) return;
     if (units.includes(newUnit.trim())) {
-      toast({ title: "Unit exists", description: `"${newUnit}" is already in the list` });
+      toast({ 
+        title: "Unit exists", 
+        description: `"${newUnit}" is already in the list` });
       return;
     }
-    setUnits((prev) => [...prev, newUnit.trim()]);
-    toast({ title: "Unit Added", description: `"${newUnit}" added to unit options` });
+    setUnits((prev) => [...prev, newUnit.trim()]); // Add the new unit to the list of units
+    toast({ 
+      title: "Unit Added", 
+      description: `"${newUnit}" added to unit options` });
     setNewUnit("");
     setUnitDialogOpen(false);
   };

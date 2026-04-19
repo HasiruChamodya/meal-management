@@ -1,3 +1,5 @@
+// Administrator: configure the Daily Meal Cycle
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,41 +13,36 @@ import { CalendarDays, Leaf, Drumstick, Save, Loader2 } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5050/api";
 
-const getAuthHeaders = () => ({
+// Function to get auth headers with token from sessionStorage
+const getAuthHeaders = () => ({ //
   "Content-Type": "application/json",
   Authorization: `Bearer ${sessionStorage.getItem("token")}`,
 });
 
 const AdminDailyCycle = () => {
-  const { toast } = useToast();
-  const today = getTodaySL();
-
-  const [date, setDate] = useState(today);
-  const [patientCycle, setPatientCycle] = useState("");
-  const [staffCycle, setStaffCycle] = useState("");
-  const [saved, setSaved] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  // Diet cycles from database
-  const [dietCycles, setDietCycles] = useState([]);
-
-  // Current saved cycle (for display badge)
-  const [currentCycle, setCurrentCycle] = useState(null);
+  const { toast } = useToast(); // For showing success/error messages
+  const today = getTodaySL();  // Get today's date in YYYY-MM-DD format (Sri Lanka timezone)
+  const [date, setDate] = useState(today); // Selected date for which to set the cycle
+  const [patientCycle, setPatientCycle] = useState(""); // Selected patient cycle
+  const [staffCycle, setStaffCycle] = useState(""); // Selected staff cycle
+  const [saved, setSaved] = useState(true); // Track if current selections are saved
+  const [saving, setSaving] = useState(false); // Track if save operation is in progress
+  const [loading, setLoading] = useState(true); // Track if data is loading
+  const [dietCycles, setDietCycles] = useState([]); // List of active diet cycles to choose from 
+  const [currentCycle, setCurrentCycle] = useState(null); // Current saved cycle for the selected date
 
   // Fetch diet cycles from API
   useEffect(() => {
     const fetchAll = async () => {
-      try {
+      try { // Fetch both diet cycles and today's daily cycle in parallel
         setLoading(true);
-
-        const [cyclesRes, dailyRes] = await Promise.all([
-          fetch(`${API_BASE}/diet-cycles`, { headers: getAuthHeaders() }),
-          fetch(`${API_BASE}/daily-cycle?date=${today}`, { headers: getAuthHeaders() }),
+        const [cyclesRes, dailyRes] = await Promise.all([  // Fetch both diet cycles and today's daily cycle in parallel
+          fetch(`${API_BASE}/diet-cycles`, { headers: getAuthHeaders() }), // Get all diet cycles
+          fetch(`${API_BASE}/daily-cycle?date=${today}`, { headers: getAuthHeaders() }), // Get today's daily cycle to pre-fill the form if it exists
         ]);
 
-        const cyclesData = await cyclesRes.json();
-        const dailyData = await dailyRes.json();
+        const cyclesData = await cyclesRes.json(); // Parse diet cycles response
+        const dailyData = await dailyRes.json(); // Parse daily cycle response
 
         // Only show active cycles
         const activeCycles = (cyclesData.cycles || []).filter((c) => c.active);
@@ -61,15 +58,20 @@ const AdminDailyCycle = () => {
           setPatientCycle(activeCycles[0].nameEn);
           setStaffCycle(activeCycles[0].nameEn);
         }
-      } catch (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-      } finally {
-        setLoading(false);
+      } 
+      catch (error) { 
+        toast({ 
+          title: "Error", 
+          description: error.message, 
+          variant: "destructive" });
+      } 
+      finally { // Ensure loading state is turned off regardless of success or failure
+        setLoading(false); 
       }
     };
 
-    fetchAll();
-  }, [today, toast]);
+    fetchAll(); //
+  }, [today, toast]); // Fetch diet cycles and today's daily cycle on component mount
 
   // Refetch daily cycle when date changes
   useEffect(() => {
@@ -80,8 +82,8 @@ const AdminDailyCycle = () => {
         });
         const data = await res.json();
 
-        if (data.cycle) {
-          setPatientCycle(data.cycle.patientCycle || "");
+        if (data.cycle) { // If there's a saved cycle for the selected date, pre-fill the form with those values
+          setPatientCycle(data.cycle.patientCycle || ""); 
           setStaffCycle(data.cycle.staffCycle || "");
           setSaved(true);
         }
@@ -93,6 +95,7 @@ const AdminDailyCycle = () => {
     if (date) fetchForDate();
   }, [date]);
 
+  // Handle save button click - send selected cycles to API to save for the selected date
   const handleSave = async () => {
     if (!patientCycle || !staffCycle) {
       toast({ title: "Error", description: "Both patient and staff cycles are required", variant: "destructive" });
@@ -100,9 +103,10 @@ const AdminDailyCycle = () => {
     }
 
     try {
-      setSaving(true);
+      setSaving(true);// Show loading state on button
 
-      const res = await fetch(`${API_BASE}/daily-cycle`, {
+      // save the cycle for that date
+      const res = await fetch(`${API_BASE}/daily-cycle`, { 
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({ date, patientCycle, staffCycle }),

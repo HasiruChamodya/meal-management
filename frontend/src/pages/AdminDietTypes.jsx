@@ -1,3 +1,5 @@
+// Admin interface for managing diet types
+
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,12 +10,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-//  Added Ban and CheckCircle for consistent action icons
 import { Plus, Edit2, Ban, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const API_BASE = `${import.meta.env.VITE_API_BASE || "http://localhost:5050/api"}/diet-types`;
-const getAuthHeaders = () => ({
+
+// Helper function to get auth headers with token from session storage
+const getAuthHeaders = () => ({ 
   "Content-Type": "application/json",
   Authorization: `Bearer ${sessionStorage.getItem("token")}`,
 });
@@ -24,78 +27,94 @@ const STATUS_STYLE = {
   inactive: "bg-error-bg text-destructive hover:bg-error-bg border-transparent font-medium",
 };
 
-const emptyDietType = {
+// Template for a new diet type with default values
+const emptyDietType = { // Template for a new diet type
   id: "", code: "", nameEn: "", nameSi: "", ageRange: "All", type: "Patient", displayOrder: 1, active: true,
 };
 
+// Main component for managing diet types
 const AdminDietTypes = () => {
-  const { toast } = useToast();
-  const [types, setTypes] = useState([]);
-  const [edit, setEdit] = useState(null);
-  const [isNew, setIsNew] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { toast } = useToast(); // For showing success/error messages
+  const [types, setTypes] = useState([]); // List of diet types
+  const [edit, setEdit] = useState(null); // Currently edited diet type, null if not editing
+  const [isNew, setIsNew] = useState(false); // Flag to indicate if the dialog is for creating a new diet type or editing an existing one
+  const [loading, setLoading] = useState(true); // Loading state for fetching diet types
+  const [saving, setSaving] = useState(false); // Saving state for when a diet type is being saved to the API
 
-  const fetchDietTypes = async () => {
-    try {
+  // Fetch diet types from API
+  const fetchDietTypes = async () => { 
+    try { // Show loading state while fetching data
       setLoading(true);
       const res = await fetch(API_BASE, { headers: getAuthHeaders() });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to fetch diet types");
       setTypes(data.dietTypes || []);
-    } catch (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
+    } 
+    catch (error) {
+      toast({ 
+        title: "Error", 
+        description: error.message, 
+        variant: "destructive" });
+    } 
+    finally {
       setLoading(false);
     }
   };
 
+  // Fetch diet types on component mount
   useEffect(() => { fetchDietTypes(); }, []);
 
-  const openNew = () => {
+  // Open dialog to create a new diet type with default values
+  const openNew = () => {  
     setIsNew(true);
     setEdit({ ...emptyDietType, displayOrder: types.filter(t => t.active).length + 1 });
   };
 
-  const save = async () => {
+  const save = async () => { // Save new or edited diet type to API
     if (!edit) return;
     try {
       setSaving(true);
-      const payload = {
+      const payload = { // Only send relevant fields in the payload
         code: edit.code, nameEn: edit.nameEn, nameSi: edit.nameSi,
         ageRange: edit.ageRange, type: edit.type, displayOrder: Number(edit.displayOrder) || 1, active: edit.active
       };
-
-      const url = isNew ? API_BASE : `${API_BASE}/${edit.id}`;
-      const res = await fetch(url, {
+      
+      const url = isNew ? API_BASE : `${API_BASE}/${edit.id}`; 
+      const res = await fetch(url, { // Endpoint for creating or updating diet type
         method: isNew ? "POST" : "PUT",
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      // Parse response and check for errors
+      const data = await res.json(); 
       if (!res.ok) throw new Error(data.message || "Save failed");
 
-      toast({ title: isNew ? "Diet Type Added" : "Diet Type Updated", description: data.message });
+      toast({ 
+        title: isNew ? "Diet Type Added" : "Diet Type Updated", 
+        description: data.message });
+
       setEdit(null);
       setIsNew(false);
       fetchDietTypes();
-    } catch (error) {
+    } 
+    catch (error) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
-    } finally {
+    } 
+    finally {
       setSaving(false);
     }
   };
 
-  const toggleStatus = async (dietType) => {
+  const toggleStatus = async (dietType) => { // Toggle active/inactive status of a diet type
     try {
-      const res = await fetch(`${API_BASE}/${dietType.id}/status`, {
+      const res = await fetch(`${API_BASE}/${dietType.id}/status`, { // Endpoint to toggle status
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify({ active: !dietType.active }),
       });
 
-      const data = await res.json();
+      const data = await res.json(); 
       if (!res.ok) throw new Error(data.message || "Status update failed");
 
       toast({ title: "Status Updated", description: `${dietType.nameEn} is now ${!dietType.active ? "Active" : "Inactive"}` });
