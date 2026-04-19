@@ -2,12 +2,13 @@
 const pool = require("../config/db");
 const { logAudit } = require("../utils/auditLogger");
 
-/* ------------------------- WARDS ------------------------- */
+// GET /api/hospital-admin/wards
 exports.getWards = async (req, res) => {
   const r = await pool.query("SELECT * FROM wards ORDER BY ward_name ASC");
   res.json({ wards: r.rows });
 };
 
+// POST /api/hospital-admin/wards
 exports.createWard = async (req, res) => {
   const { ward_name, bed_count = 0, cot_count = 0, icu_count = 0 } = req.body;
   if (!ward_name?.trim()) return res.status(400).json({ message: "ward_name required" });
@@ -33,6 +34,7 @@ exports.createWard = async (req, res) => {
   res.status(201).json({ ward: r.rows[0] });
 };
 
+// PUT /api/hospital-admin/wards/:id
 exports.updateWard = async (req, res) => {
   const id = Number(req.params.id);
   const { ward_name, bed_count = 0, cot_count = 0, icu_count = 0 } = req.body;
@@ -63,12 +65,13 @@ exports.updateWard = async (req, res) => {
   res.json({ ward: r.rows[0] });
 };
 
-/* ---------------------- DIET CONFIG ---------------------- */
+// GET /api/hospital-admin/diet-config
 exports.getDietConfig = async (req, res) => {
   const r = await pool.query("SELECT active_diets, active_cycles, updated_at FROM diet_config WHERE id=1");
   res.json({ config: r.rows[0] || { active_diets: {}, active_cycles: {} } });
 };
 
+// POST /api/hospital-admin/diet-config
 exports.saveDietConfig = async (req, res) => {
   const { active_diets = {}, active_cycles = {} } = req.body;
 
@@ -93,12 +96,13 @@ exports.saveDietConfig = async (req, res) => {
   res.json({ config: r.rows[0] });
 };
 
-/* ---------------------- INGREDIENTS ---------------------- */
+// GET /api/hospital-admin/ingredients
 exports.getIngredients = async (req, res) => {
   const r = await pool.query("SELECT * FROM ingredients ORDER BY name ASC");
   res.json({ ingredients: r.rows });
 };
 
+// POST /api/hospital-admin/ingredients
 exports.addIngredient = async (req, res) => {
   const { name } = req.body;
   if (!name?.trim()) return res.status(400).json({ message: "name required" });
@@ -124,7 +128,7 @@ exports.addIngredient = async (req, res) => {
   res.status(201).json({ ingredient: r.rows[0] });
 };
 
-/* ---------------------- NORM WEIGHTS ---------------------- */
+// GET /api/hospital-admin/norm-weights
 exports.getNormWeights = async (req, res) => {
   const diet = (req.query.diet || "").trim();
   if (!diet) return res.status(400).json({ message: "diet query param required" });
@@ -139,7 +143,7 @@ exports.getNormWeights = async (req, res) => {
   res.json({ norms: r.rows });
 };
 
-// bulk replace for a diet
+// POST /api/hospital-admin/norm-weights
 exports.saveNormWeights = async (req, res) => {
   const { norms = [] } = req.body;
   if (!Array.isArray(norms)) return res.status(400).json({ message: "norms must be array" });
@@ -186,12 +190,13 @@ exports.saveNormWeights = async (req, res) => {
   }
 };
 
-/* ------------------ FRACTIONAL FORMULAS ------------------ */
+// GET /api/hospital-admin/fractional-formulas
 exports.getFractionalFormulas = async (req, res) => {
   const r = await pool.query("SELECT * FROM fractional_formulas ORDER BY ingredient ASC");
   res.json({ formulas: r.rows });
 };
 
+// POST /api/hospital-admin/fractional-formulas
 exports.createFractionalFormula = async (req, res) => {
   const { ingredient, fractions = {} } = req.body;
   if (!ingredient?.trim()) return res.status(400).json({ message: "ingredient required" });
@@ -217,6 +222,7 @@ exports.createFractionalFormula = async (req, res) => {
   res.status(201).json({ formula: r.rows[0] });
 };
 
+// PUT /api/hospital-admin/fractional-formulas/:id
 exports.updateFractionalFormula = async (req, res) => {
   const id = Number(req.params.id);
   const { ingredient, fractions = {} } = req.body;
@@ -245,7 +251,7 @@ exports.updateFractionalFormula = async (req, res) => {
   res.json({ formula: r.rows[0] });
 };
 
-/* ----------------------- CATEGORIES ----------------------- */
+// DELETE /api/hospital-admin/fractional-formulas/:id
 exports.getCategories = async (req, res) => {
   const r = await pool.query("SELECT * FROM categories ORDER BY name ASC");
   res.json({ categories: r.rows });
@@ -276,6 +282,7 @@ exports.createCategory = async (req, res) => {
   res.status(201).json({ category: r.rows[0] });
 };
 
+// PUT /api/hospital-admin/categories/:id
 exports.updateCategory = async (req, res) => {
   const id = Number(req.params.id);
   const { name } = req.body;

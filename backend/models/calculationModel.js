@@ -1,49 +1,37 @@
-/**
- * Calculation Engine Model
- * ========================
- * Implements the unified calculation pattern:
- *   Total = Σ (norm_weight[item][meal][diet_type] × patient_count[diet_type])
- *
- * All math is done in BASE UNITS (grams, ml, pieces).
- * Display conversion happens at the end.
- */
 
 const pool = require("../config/db");
 const { getBaseUnit, toDisplayUnit, roundDisplay } = require("../utils/uom");
 
-// ──────────────────────────────────────────────────
-// STEP 0: Gather all input data for a given date
-// ──────────────────────────────────────────────────
-
+// This module implements the core calculation logic for determining required quantities of each item
 async function gatherInputs(calcDate) {
-  // 1. Get all submitted census entries for this date
+  // Get all submitted census entries for this date
   const censusRes = await pool.query(
     `SELECT * FROM census_entries WHERE entry_date = $1 AND status = 'submitted'`,
     [calcDate]
   );
   const censusRows = censusRes.rows;
 
-  // 2. Get staff meals for this date
+  // Get staff meals for this date
   const staffRes = await pool.query(
     `SELECT * FROM staff_meals WHERE meal_date = $1 LIMIT 1`,
     [calcDate]
   );
   const staffRow = staffRes.rows[0] || null;
 
-  // 3. Get daily meal cycle
+  // Get daily meal cycle
   const cycleRes = await pool.query(
     `SELECT * FROM daily_meal_cycles WHERE date <= $1 ORDER BY date DESC LIMIT 1`,
     [calcDate]
   );
   const cycleRow = cycleRes.rows[0] || { patient_cycle: "Vegetable", staff_cycle: "Chicken" };
 
-  // 4. Get all active diet types
+  // Get all active diet types
   const dietTypesRes = await pool.query(
     `SELECT * FROM diet_types WHERE active = TRUE ORDER BY display_order ASC`
   );
   const dietTypes = dietTypesRes.rows;
 
-  // 5. Get all active items
+  // Get all active items
   const itemsRes = await pool.query(
     `SELECT i.*, c.name as category_name FROM items i
      LEFT JOIN categories c ON c.id = i.category_id
@@ -51,11 +39,11 @@ async function gatherInputs(calcDate) {
   );
   const items = itemsRes.rows;
 
-  // 6. Get ALL norm weights
+  // Get ALL norm weights
   const weightsRes = await pool.query(`SELECT * FROM norm_weights`);
   const normWeights = weightsRes.rows;
 
-  // 7. Get recipes with ingredients
+  // Get recipes with ingredients
   const recipesRes = await pool.query(
     `SELECT * FROM recipes WHERE active = TRUE`
   );
@@ -69,7 +57,7 @@ async function gatherInputs(calcDate) {
   );
   const recipeIngredients = recipeIngredientsRes.rows;
 
-  // 8. Get recipe diet factors
+  // Get recipe diet factors
   const factorsRes = await pool.query(`SELECT * FROM recipe_diet_factors`);
   const recipeDietFactors = factorsRes.rows;
 
@@ -86,9 +74,6 @@ async function gatherInputs(calcDate) {
   };
 }
 
-// ──────────────────────────────────────────────────
-// STEP 1: Aggregate ward data into hospital totals
-// ──────────────────────────────────────────────────
 
 function aggregateWardData(censusRows, dietTypes) {
   // Sum patient counts per diet type across all wards
@@ -155,10 +140,7 @@ function aggregateWardData(censusRows, dietTypes) {
   };
 }
 
-// ──────────────────────────────────────────────────
-// STEP 2: Calculate norm-weight items
-// (Rice, Protein, Vegetables, Condiments)
-// ──────────────────────────────────────────────────
+
 
 function calculateNormWeightItems(items, normWeights, dietTypes, patientTotals, staffRow) {
   const MEALS = ["breakfast", "lunch", "dinner"];
@@ -249,30 +231,8 @@ function calculateNormWeightItems(items, normWeights, dietTypes, patientTotals, 
   return results;
 }
 
-// ──────────────────────────────────────────────────
-// STEP 3: Protein Matrix — Cycle + Norm Weight Logic
-// ──────────────────────────────────────────────────
-//
-// Cycle-to-protein mapping (1:1):
-//   Meat = Chicken, Fish = Fresh Fish, Egg = Eggs, Dried Fish = Dried Fish
-//   Vegetable = no main protein for regular patients
-//
-// Rules:
-//   1. REGULAR diet types (type = "Patient" or "Paediatric"):
-//      → ONLY get protein when that protein's cycle is the active PATIENT cycle
-//      → On Vegetable day, Normal/Diabetic/S1-S5 get ZERO chicken even if norm=30g
-//
-//   2. SPECIAL diet types (type = "Special", e.g. HPD):
-//      → Get protein if their norm weight > 0, REGARDLESS of active cycle
-//      → The norm_weights table is the source of truth for special diets
-//
-//   3. STAFF:
-//      → Follows the STAFF cycle independently (separate from patient cycle)
-//      → Only gets protein when protein's cycle matches staff cycle
-//
-//   4. EXTRA diet type (Breakfast Extra):
-//      → Follows regular patient cycle rules
 
+// 
 function filterProteinByActiveCycle(results, items, patientCycle, staffCycle, dietTypes) {
   // Build a lookup: dietTypeCode → type ("Patient", "Paediatric", "Special", "Staff", "Extra")
   const dietTypeLookup = {};
@@ -334,9 +294,6 @@ function filterProteinByActiveCycle(results, items, patientCycle, staffCycle, di
   });
 }
 
-// ──────────────────────────────────────────────────
-// STEP 4: Calculate vegetable category summaries
-// ──────────────────────────────────────────────────
 
 function calculateVegSummaries(results, items) {
   const vegCategories = {}; // { palaa: totalKg, gedi: totalKg, ... }
@@ -360,10 +317,6 @@ function calculateVegSummaries(results, items) {
   return vegCategories;
 }
 
-// ──────────────────────────────────────────────────
-// STEP 5: Calculate recipe results
-// (Pol Sambola, Soup, Kanda)
-// ──────────────────────────────────────────────────
 
 function calculateRecipes(
   recipes,
@@ -448,9 +401,6 @@ function calculateRecipes(
   return recipeResults;
 }
 
-// ──────────────────────────────────────────────────
-// STEP 6: Build grand totals per item (across meals)
-// ──────────────────────────────────────────────────
 
 function buildGrandTotals(lineItems, items) {
   const totals = {}; // itemId → { breakfast, lunch, dinner, grandTotal (display unit) }
@@ -495,9 +445,6 @@ function buildGrandTotals(lineItems, items) {
   return Object.values(totals);
 }
 
-// ──────────────────────────────────────────────────
-// STEP 7: Build PO line items with prices
-// ──────────────────────────────────────────────────
 
 function buildPOLineItems(grandTotals, items) {
   return grandTotals.map((gt) => {
@@ -520,9 +467,6 @@ function buildPOLineItems(grandTotals, items) {
   });
 }
 
-// ──────────────────────────────────────────────────
-// MAIN: Run the full calculation
-// ──────────────────────────────────────────────────
 
 async function runCalculation(calcDate, userId) {
   const client = await pool.connect();
@@ -551,10 +495,10 @@ async function runCalculation(calcDate, userId) {
     const patientCycle = cycleRow.patient_cycle;
     const staffCycle = cycleRow.staff_cycle;
 
-    // Step 1: Aggregate ward data
+    // Aggregate ward data
     const aggregated = aggregateWardData(censusRows, dietTypes);
 
-    // Step 2: Calculate all norm-weight items
+    // Calculate all norm-weight items
     let lineItems = calculateNormWeightItems(
       items,
       normWeights,
@@ -563,13 +507,13 @@ async function runCalculation(calcDate, userId) {
       staffRow
     );
 
-    // Step 3: Filter protein by active cycle
+    // Filter protein by active cycle
     lineItems = filterProteinByActiveCycle(lineItems, items, patientCycle, staffCycle, dietTypes);
 
-    // Step 4: Vegetable summaries
+    // Vegetable summaries
     const vegSummaries = calculateVegSummaries(lineItems, items);
 
-    // Step 5: Recipe calculations
+    // Recipe calculations
     const recipeResults = calculateRecipes(
       recipes,
       recipeIngredients,
@@ -580,10 +524,10 @@ async function runCalculation(calcDate, userId) {
       aggregated.specialCounts
     );
 
-    // Step 6: Grand totals
+    // Grand totals
     const grandTotals = buildGrandTotals(lineItems, items);
 
-    // Step 7: PO line items
+    // PO line items
     const poLineItems = buildPOLineItems(grandTotals, items);
 
     // ── PERSIST TO DATABASE ──
@@ -707,9 +651,6 @@ async function runCalculation(calcDate, userId) {
   }
 }
 
-// ──────────────────────────────────────────────────
-// Fetch saved calculation results
-// ──────────────────────────────────────────────────
 
 async function getCalculationResults(calcDate) {
   const runRes = await pool.query(

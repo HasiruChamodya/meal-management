@@ -2,11 +2,13 @@
 const pool = require("../config/db");
 const { writeAudit } = require("../utils/audit");
 
+// GET /api/categories
 exports.getCategories = async (req, res) => {
   const r = await pool.query(`SELECT id, name FROM categories ORDER BY id ASC`);
   res.json({ categories: r.rows });
 };
 
+// POST /api/categories
 exports.createCategory = async (req, res) => {
   const { name } = req.body;
   if (!name?.trim()) return res.status(400).json({ message: "name is required" });
@@ -27,6 +29,7 @@ exports.createCategory = async (req, res) => {
   res.status(201).json({ category: r.rows[0] });
 };
 
+// PUT /api/categories/:id
 exports.updateCategory = async (req, res) => {
   const id = req.params.id;
   const { name } = req.body;
@@ -49,6 +52,7 @@ exports.updateCategory = async (req, res) => {
   res.json({ category: r.rows[0] });
 };
 
+// DELETE /api/categories/:id
 exports.deleteCategory = async (req, res) => {
   const { id } = req.params;
 

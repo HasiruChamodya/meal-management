@@ -3,13 +3,16 @@ const { writeAudit } = require("../utils/audit");
 const { getBaseUnit, toDisplayUnit, roundDisplay } = require("../utils/uom");
 const pool = require("../config/db");
 
+// Helper functions to build cook sheet sections
 exports.runCalculation = async (req, res) => {
+  // This endpoint triggers the calculation for a given date. It also logs the action in the audit trail with details about the calculation run.
   try {
     const { date } = req.body;
     if (!date) return res.status(400).json({ message: "date is required" });
 
     const result = await calculationModel.runCalculation(date, req.user?.id);
-
+    
+    // Log the calculation run in the audit trail with relevant details for monitoring and debugging
     await writeAudit({
       req, action: "RUN_CALCULATION", entity: "calculation_runs",
       entity_id: String(result.calcRunId),
@@ -25,7 +28,9 @@ exports.runCalculation = async (req, res) => {
       patientCycle: result.patientCycle, staffCycle: result.staffCycle,
       aggregated: result.aggregated,
     });
-  } catch (error) {
+  } 
+  // Catch any errors that occur during the calculation process, log them in the audit trail with error severity, and return a generic error message to the client
+  catch (error) {
     console.error("RUN CALCULATION ERROR:", error);
     await writeAudit({
       req, action: "RUN_CALCULATION", entity: "calculation_runs",
@@ -36,6 +41,7 @@ exports.runCalculation = async (req, res) => {
   }
 };
 
+// This controller handles fetching calculation results, cook sheets, and item breakdowns for a given date. It also includes helper functions to group results for frontend display and build specific sections of the cook sheet based on the calculation results.
 exports.getResults = async (req, res) => {
   try {
     const { date } = req.query;
@@ -44,11 +50,9 @@ exports.getResults = async (req, res) => {
     const results = await calculationModel.getCalculationResults(date);
     if (!results) return res.status(404).json({ message: "No calculation results found for this date" });
 
-    // Fetch all categories from database for dynamic tab grouping
-    const catResult = await pool.query(`SELECT id, name FROM categories ORDER BY id ASC`);
-    const categories = catResult.rows;
-
-    const grouped = groupResultsForFrontend(results, categories);
+    const catResult = await pool.query(`SELECT id, name FROM categories ORDER BY id ASC`); // Fetch categories to maintain consistent ordering and names for frontend tabs, instead of relying on category names from line items which may be inconsistent. This also allows us to return empty tabs for categories that had no items in the calculation, preserving the full category structure in the frontend.
+    const categories = catResult.rows; // [{id: 1, name: "Rice"}, {id: 2, name: "Vegetables"}, ...] in DB order
+    const grouped = groupResultsForFrontend(results, categories); // Group line items into tabs based on their category_id, using the database categories for consistent tab structure. Items with missing or unmatched category_id will be grouped into an "Extras & Specials" tab. This function also calculates grand totals and prepares the data for frontend display without hardcoding any category names or IDs.
 
     res.status(200).json({
       run: results.run,
@@ -58,12 +62,15 @@ exports.getResults = async (req, res) => {
       recipeResults: results.recipeResults,
       poLineItems: results.poLineItems,
     });
-  } catch (error) {
+  } 
+  // Catch any errors that occur during the calculation process, log them in the audit trail with error severity, and return a generic error message to the client
+  catch (error) {
     console.error("GET CALC RESULTS ERROR:", error);
     res.status(500).json({ message: "Failed to fetch calculation results" });
   }
 };
 
+// This controller also includes an endpoint to fetch the daily history of calculation runs, which can be used to display a history table in the frontend with details about each run, such as date, patient cycle, staff cycle, total items, and total recipes. This allows users to track past calculations and their outcomes.
 exports.getCookSheet = async (req, res) => {
   try {
     const { date } = req.query;
@@ -99,6 +106,7 @@ exports.getCookSheet = async (req, res) => {
   }
 };
 
+// This endpoint provides a detailed breakdown of how the total quantity for a specific item in the calculation was derived, showing the contribution from each meal and diet type. This allows users to understand the composition of the item's total and identify which meals and diet types are driving the demand for that item.
 exports.getItemBreakdown = async (req, res) => {
   try {
     const { itemId } = req.params;
@@ -133,10 +141,6 @@ exports.getItemBreakdown = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch item breakdown" });
   }
 };
-
-// ──────────────────────────────────────────────────
-// Helper: Group results into frontend tab structure
-// ──────────────────────────────────────────────────
 
 // Special tab key for raw-sum extras that don't correspond to a DB category
 const EXTRAS_TAB_KEY = 'extras';
@@ -213,7 +217,7 @@ function groupResultsForFrontend(results, categories) {
   return { tabs, categories: activeCategories };
 }
 
-// ──────────────────────────────────────────────────
+// Helper function to build the diet instructions section of the cook sheet based on the line items from the calculation results. It aggregates rice and bread items separately for each meal to provide clear instructions on how much rice and bread to prepare for breakfast, lunch, and dinner.
 function buildDietInstructions(lineItems) {
   const instructions = [];
 
@@ -248,7 +252,7 @@ function buildDietInstructions(lineItems) {
   return instructions;
 }
 
-// ──────────────────────────────────────────────────
+// Helper function to build the protein allocation section of the cook sheet based on the line items from the calculation results. It identifies which items are proteins, then aggregates the total quantity for each protein item by meal and diet type (patients vs staff) to provide a clear allocation of how much of each protein item is needed for patients and staff across breakfast, lunch, and dinner.
 function buildProteinAllocation(lineItems) {
   const proteinItems = lineItems.filter((li) => !!li.isProtein);
   const allocation = {};

@@ -8,6 +8,7 @@ router.post("/register", register);
 // POST /api/auth/login
 router.post("/login", login);
 
+// POST /api/auth/set-new-password
 router.post("/set-new-password", setNewPassword);
 
 module.exports = router;

@@ -1,6 +1,7 @@
 const dietTypesModel = require("../models/dietTypesModel");
 const { writeAudit } = require("../utils/audit");
 
+// GET /api/diet-types
 exports.getDietTypes = async (req, res) => {
   try {
     const dietTypes = await dietTypesModel.getAllDietTypes();
@@ -11,6 +12,7 @@ exports.getDietTypes = async (req, res) => {
   }
 };
 
+// POST /api/diet-types
 exports.createDietType = async (req, res) => {
   try {
     const {
@@ -66,6 +68,7 @@ exports.createDietType = async (req, res) => {
   }
 };
 
+// PUT /api/diet-types/:id
 exports.updateDietType = async (req, res) => {
   try {
     const { id } = req.params;
@@ -128,6 +131,7 @@ exports.updateDietType = async (req, res) => {
   }
 };
 
+// PATCH /api/diet-types/:id/status
 exports.toggleDietTypeStatus = async (req, res) => {
   try {
     const { id } = req.params;
