@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 
+// Middleware to generate a unique request ID and track request duration and status
 function auditRequestMiddleware(req, res, next) {
   const start = Date.now();
 
