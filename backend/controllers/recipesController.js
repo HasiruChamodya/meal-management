@@ -1,6 +1,7 @@
   const recipesModel = require("../models/recipesModel");
   const { writeAudit } = require("../utils/audit");
 
+  // GET /api/recipes
   exports.getRecipes = async (req, res) => {
     try {
       const recipes = await recipesModel.getRecipes();
@@ -11,6 +12,7 @@
     }
   };
 
+  // POST /api/recipes
   exports.createRecipe = async (req, res) => {
     try {
       const { recipeKey, name } = req.body;
@@ -43,6 +45,7 @@
     }
   };
 
+  // PUT /api/recipes/:id
   exports.updateRecipe = async (req, res) => {
     try {
       const { id } = req.params;
@@ -82,6 +85,7 @@
     }
   };
 
+  // DELETE /api/recipes/:id
   exports.getRecipeIngredients = async (req, res) => {
     try {
       const { recipeId } = req.params;
@@ -93,6 +97,7 @@
     }
   };
 
+  // DELETE /api/recipes/:id
   exports.addRecipeIngredient = async (req, res) => {
     try {
       const { recipeId } = req.params;
@@ -133,6 +138,7 @@
     }
   };
 
+  // PUT /api/recipes/ingredients/:id
   exports.updateRecipeIngredient = async (req, res) => {
     try {
       const { id } = req.params;
@@ -175,6 +181,7 @@
     }
   };
 
+  // DELETE /api/recipes/ingredients/:id
   exports.deleteRecipeIngredient = async (req, res) => {
     try {
       const { id } = req.params;
@@ -204,6 +211,7 @@
     }
   };
 
+  // GET /api/recipes/available-items
   exports.getAvailableItems = async (req, res) => {
     try {
       const items = await recipesModel.getAvailableItems();

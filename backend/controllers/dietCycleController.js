@@ -17,7 +17,9 @@ exports.getDietCycles = async (req, res) => {
     });
 
     res.status(200).json({ cycles });
-  } catch (error) {
+  } 
+  // Catch any unexpected errors and log them in the audit trail with severity "error"
+  catch (error) {
     console.error("GET DIET CYCLES ERROR:", error);
 
     await writeAudit({
@@ -52,7 +54,7 @@ exports.createDietCycle = async (req, res) => {
 
       return res.status(400).json({ message: "Code and English Name are required" });
     }
-
+    // Check for duplicate code before attempting to create the diet cycle
     const newCycle = await dietCycleModel.createDietCycle({
       code, nameEn, nameSi, active
     });
@@ -73,7 +75,9 @@ exports.createDietCycle = async (req, res) => {
       message: "Diet cycle created successfully",
       cycle: newCycle,
     });
-  } catch (error) {
+  } 
+  // Catch any unexpected errors and log them in the audit trail with severity "error"
+  catch (error) {
     console.error("CREATE DIET CYCLE ERROR:", error);
 
     await writeAudit({
@@ -131,7 +135,9 @@ exports.updateDietCycle = async (req, res) => {
       message: "Diet cycle updated successfully",
       cycle: updatedCycle,
     });
-  } catch (error) {
+  } 
+  // Catch any unexpected errors and log them in the audit trail with severity "error"
+  catch (error) {
     console.error("UPDATE DIET CYCLE ERROR:", error);
 
     await writeAudit({

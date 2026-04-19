@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 
+// Create a new audit log entry
 const createAuditLog = async ({
   user_id = null,
   user_name = "System",
@@ -32,7 +33,7 @@ const createAuditLog = async ({
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
     RETURNING *
   `;
-
+  // Ensure severity is one of the allowed values
   const values = [
     user_id,
     user_name,
@@ -52,6 +53,7 @@ const createAuditLog = async ({
   return result.rows[0];
 };
 
+// Retrieve all audit logs, optionally filtered by action
 const getAllAuditLogs = async (action = null) => {
   let query = `
     SELECT
@@ -71,19 +73,22 @@ const getAllAuditLogs = async (action = null) => {
       success
     FROM audit_logs
   `;
-  const values = [];
+  const values = []; // For parameterized query
 
+  // If an action filter is provided and it's not "all", add a WHERE clause
   if (action && action !== "all") {
     query += ` WHERE action = $1`;
     values.push(action);
   }
 
-  query += ` ORDER BY timestamp DESC`;
-
+  query += ` ORDER BY timestamp DESC`; // Order by most recent first
+  
+  // Execute the query and return the results
   const result = await pool.query(query, values);
   return result.rows;
 };
 
+// Retrieve distinct audit actions for filtering
 const getAuditActions = async () => {
   const query = `
     SELECT DISTINCT action

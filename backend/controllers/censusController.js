@@ -6,6 +6,7 @@ const getTodaySL = () => {
   return new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Colombo" });
 };
 
+// This controller manages all census-related operations, including fetching ward census data, saving drafts, submitting final census entries, and handling staff meal counts. It ensures that only authorized edits are allowed (e.g., only for the current day and if not locked) and logs all significant actions in the audit trail for accountability and traceability.
 exports.getWardCensus = async (req, res) => {
   try {
     const { wardId } = req.params;
@@ -23,6 +24,7 @@ exports.getWardCensus = async (req, res) => {
   }
 };
 
+// This endpoint retrieves the census status for all wards on a specific date, allowing users to see which wards have submitted their census data, which are still in draft, and which (if any) are locked. This provides a comprehensive overview of the census submission status across the hospital for that day.
 exports.getWardStatuses = async (req, res) => {
   try {
     const { date } = req.query;
@@ -36,6 +38,7 @@ exports.getWardStatuses = async (req, res) => {
   }
 };
 
+// This endpoint allows users to save a draft of the ward census data for the current day. It performs validation to ensure that only the current day's data can be edited and that locked records cannot be modified. The draft status allows users to save their progress without finalizing the submission, enabling them to return later to complete it.
 exports.saveWardCensusDraft = async (req, res) => {
   try {
     const { wardId, date, diets = {}, special = {}, extras = {}, customExtras = [] } = req.body;
@@ -71,6 +74,7 @@ exports.saveWardCensusDraft = async (req, res) => {
   }
 };
 
+//  This endpoint finalizes the submission of the ward census data for the current day. It performs the same validations as the draft-saving endpoint to ensure that only valid submissions are accepted. Once submitted, the census entry is marked as "submitted" and can no longer be edited unless an admin unlocks it. This ensures that the submitted data is stable and can be used for meal calculations without risk of last-minute changes.
 exports.submitWardCensus = async (req, res) => {
   try {
     const { wardId, date, diets = {}, special = {}, extras = {}, customExtras = [] } = req.body;
@@ -107,6 +111,7 @@ exports.submitWardCensus = async (req, res) => {
   }
 };
 
+// This endpoint retrieves the staff meal counts for a specific date, allowing the kitchen to plan for the number of meals needed for staff in addition to patients. It provides a breakdown of breakfast, lunch, and dinner counts, as well as the staff meal cycle (e.g., Chicken, Fish, etc.) to ensure that the correct meals are prepared for staff members.
 exports.getStaffMeals = async (req, res) => {
   try {
     const { date } = req.query;
@@ -120,6 +125,7 @@ exports.getStaffMeals = async (req, res) => {
   }
 };
 
+// This endpoint allows users to submit the staff meal counts for the current day. It includes validation to ensure that only the current day's data can be edited and that locked records cannot be modified. The submitted staff meal counts are crucial for the kitchen to plan and prepare the appropriate number of meals for staff members, in addition to patient meals.
 exports.submitStaffMeals = async (req, res) => {
   try {
     const { date, breakfast = 0, lunch = 0, dinner = 0, staffCycle = "Chicken" } = req.body;
@@ -154,6 +160,7 @@ exports.submitStaffMeals = async (req, res) => {
   }
 };
 
+// This endpoint allows users to retrieve all their census submissions for a specific date, providing them with a history of their entries and the ability to review past submissions. This can be useful for tracking changes over time and ensuring that all census data is accurate and complete.
 exports.getMySubmissions = async (req, res) => {
   try {
     const { date } = req.query;

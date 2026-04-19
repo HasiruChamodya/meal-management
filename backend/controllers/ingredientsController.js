@@ -2,11 +2,13 @@
 const pool = require("../config/db");
 const { writeAudit } = require("../utils/audit");
 
+// GET /api/ingredients
 exports.getIngredients = async (req, res) => {
   const r = await pool.query(`SELECT id, name FROM ingredients ORDER BY name ASC`);
   res.json({ ingredients: r.rows });
 };
 
+// POST /api/ingredients
 exports.createIngredient = async (req, res) => {
   const { name } = req.body;
   if (!name?.trim()) return res.status(400).json({ message: "name is required" });

@@ -1,6 +1,7 @@
 const pool = require("../config/db");
 const { writeAudit } = require("../utils/audit");
 
+// GET /api/diet-plans
 exports.getAll = async (req, res) => {
   const r = await pool.query(
     "SELECT id, name, display_order, active FROM diet_plans ORDER BY display_order ASC"
@@ -8,6 +9,7 @@ exports.getAll = async (req, res) => {
   res.json({ plans: r.rows });
 };
 
+// POST /api/diet-plans
 exports.create = async (req, res) => {
   const { name, display_order = 1 } = req.body;
 
@@ -21,6 +23,7 @@ exports.create = async (req, res) => {
   res.status(201).json({ plan: r.rows[0] });
 };
 
+// PUT /api/diet-plans/:id
 exports.update = async (req, res) => {
   const { id } = req.params;
   const { name, display_order } = req.body;
@@ -36,6 +39,7 @@ exports.update = async (req, res) => {
   res.json({ plan: r.rows[0] });
 };
 
+// PATCH /api/diet-plans/:id/status
 exports.toggle = async (req, res) => {
   const { id } = req.params;
 
@@ -50,6 +54,7 @@ exports.toggle = async (req, res) => {
   res.json({ plan: r.rows[0] });
 };
 
+// DELETE /api/diet-plans/:id
 exports.remove = async (req, res) => {
   const { id } = req.params;
 

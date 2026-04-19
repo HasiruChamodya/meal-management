@@ -1,6 +1,7 @@
 const wardModel = require("../models/wardModel");
 const { writeAudit } = require("../utils/audit");
 
+// GET /api/wards
 exports.getWards = async (req, res) => {
   try {
     const wards = await wardModel.getAllWards();
@@ -33,6 +34,7 @@ exports.getWards = async (req, res) => {
   }
 };
 
+// POST /api/wards
 exports.createWard = async (req, res) => {
   try {
     const { code, name, beds = 0, cots = 0, icu = 0, incubators = 0 } = req.body;
@@ -85,6 +87,7 @@ exports.createWard = async (req, res) => {
   }
 };
 
+// PUT /api/wards/:id
 exports.updateWard = async (req, res) => {
   try {
     const { id } = req.params;
@@ -146,6 +149,7 @@ exports.updateWard = async (req, res) => {
   }
 };
 
+// PUT /api/wards/:id/status
 exports.toggleWardStatus = async (req, res) => {
   try {
     const { id } = req.params;

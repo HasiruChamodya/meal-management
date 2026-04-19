@@ -2,6 +2,7 @@
   const pool = require("../config/db");
   const { writeAudit } = require("../utils/audit");
 
+  // GET /api/diet-config
   exports.getDietConfig = async (req, res) => {
     const r = await pool.query(`SELECT id, active_diets, active_cycles FROM diet_config WHERE id=1`);
     if (r.rowCount === 0) {
@@ -10,6 +11,7 @@
     res.json({ config: r.rows[0] });
   };
 
+  // POST /api/diet-config
   exports.saveDietConfig = async (req, res) => {
     const { active_diets = {}, active_cycles = {} } = req.body;
 

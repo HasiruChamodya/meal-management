@@ -1,6 +1,7 @@
 const invoiceModel = require("../models/invoiceModel");
 const pool = require("../config/db");
 
+// GET /api/invoices/pending-deliveries
 exports.getPendingDeliveries = async (req, res) => {
   try {
     const deliveries = await invoiceModel.getPendingDeliveries();
@@ -11,18 +12,19 @@ exports.getPendingDeliveries = async (req, res) => {
   }
 };
 
+// GET /api/invoices/po/:poId
 exports.getPoForReceiving = async (req, res) => {
   try {
     const { poId } = req.params;
     
-    // 1. Get the PO Details
+    // Get the PO Details
     const poRes = await pool.query("SELECT * FROM purchase_orders WHERE id = $1", [poId]);
     if (poRes.rows.length === 0) {
       return res.status(404).json({ message: "Purchase order not found" });
     }
     const po = poRes.rows[0];
 
-    // 2. Get the specific items ordered in that PO
+    // Get the specific items ordered in that PO
     const itemsRes = await pool.query(`
       SELECT 
         pi.id, pi.item_id as "itemId", pi.quantity, pi.unit_price as "unitPrice", 
@@ -46,6 +48,7 @@ exports.getPoForReceiving = async (req, res) => {
   }
 };
 
+// POST /api/invoices/receive-delivery
 exports.receiveDelivery = async (req, res) => {
   try {
     const { poId, invoiceNumber, invoiceDate, items, overallNotes } = req.body;
@@ -79,7 +82,7 @@ exports.receiveDelivery = async (req, res) => {
   }
 };
 
-
+// GET /api/invoices/issues
 exports.getIssueReports = async (req, res) => {
   try {
     const issues = await invoiceModel.getIssueReports();

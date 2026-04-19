@@ -1,0 +1,243 @@
+
+-- HOSPITAL MEAL MANAGEMENT SYSTEM - POSTGRESQL SCHEMA SETUP
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role VARCHAR(30) NOT NULL,
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE wards (
+    id BIGSERIAL PRIMARY KEY,
+    ward_code VARCHAR(50) UNIQUE NOT NULL,
+    ward_name VARCHAR(150) NOT NULL,
+    bed_count INTEGER DEFAULT 0 NOT NULL,
+    cot_count INTEGER DEFAULT 0 NOT NULL,
+    icu_count INTEGER DEFAULT 0 NOT NULL,
+    incubator_count INTEGER DEFAULT 0 NOT NULL,
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE diet_types (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name_en VARCHAR(150) NOT NULL,
+    name_si VARCHAR(150) NOT NULL,
+    age_range VARCHAR(100) DEFAULT 'All' NOT NULL,
+    type VARCHAR(50) DEFAULT 'Patient' NOT NULL,
+    display_order INTEGER DEFAULT 1 NOT NULL,
+    active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE diet_cycles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name_en VARCHAR(255) NOT NULL,
+    name_si VARCHAR(255),
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE diet_config (
+    id INTEGER PRIMARY KEY,
+    active_diets JSONB DEFAULT '{}',
+    active_cycles JSONB DEFAULT '{}'
+);
+
+CREATE TABLE items (
+    id SERIAL PRIMARY KEY,
+    name_en VARCHAR(150) NOT NULL,
+    name_si VARCHAR(150) NOT NULL,
+    unit VARCHAR(50) DEFAULT 'Kg',
+    default_price NUMERIC(10,2) DEFAULT 0,
+    category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
+    is_protein BOOLEAN DEFAULT false,
+    diet_cycle VARCHAR(50),
+    is_vegetable BOOLEAN DEFAULT false,
+    veg_category VARCHAR(50),
+    is_extra BOOLEAN DEFAULT false,
+    calc_type VARCHAR(50) DEFAULT 'norm_weight',
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE norm_weights (
+    item_id INTEGER REFERENCES items(id) ON DELETE CASCADE,
+    diet_type_id INTEGER REFERENCES diet_types(id) ON DELETE CASCADE,
+    meal VARCHAR(20),
+    weight DECIMAL(10,2) DEFAULT 0,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (item_id, diet_type_id, meal)
+);
+
+CREATE TABLE recipes (
+    id SERIAL PRIMARY KEY,
+    recipe_key VARCHAR(100) UNIQUE NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE recipe_ingredients (
+    id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE RESTRICT,
+    norm_per_patient NUMERIC(10,2) DEFAULT 0 NOT NULL,
+    unit VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE census_entries (
+    id SERIAL PRIMARY KEY,
+    ward_id INTEGER NOT NULL REFERENCES wards(id),
+    entry_date DATE NOT NULL,
+    status VARCHAR(30) DEFAULT 'draft' NOT NULL,
+    total_patients INTEGER DEFAULT 0 NOT NULL,
+    diets JSONB DEFAULT '{}' NOT NULL,
+    special JSONB DEFAULT '{}' NOT NULL,
+    extras JSONB DEFAULT '{}' NOT NULL,
+    custom_extras JSONB DEFAULT '[]' NOT NULL,
+    submitted_by INTEGER REFERENCES users(id),
+    submitted_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE staff_meals (
+    id SERIAL PRIMARY KEY,
+    meal_date DATE UNIQUE NOT NULL,
+    breakfast INTEGER DEFAULT 0 NOT NULL,
+    lunch INTEGER DEFAULT 0 NOT NULL,
+    dinner INTEGER DEFAULT 0 NOT NULL,
+    staff_cycle VARCHAR(100) DEFAULT 'Chicken',
+    status VARCHAR(30) DEFAULT 'submitted' NOT NULL,
+    submitted_by INTEGER REFERENCES users(id),
+    submitted_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE calculation_runs (
+    id SERIAL PRIMARY KEY,
+    calc_date DATE UNIQUE NOT NULL,
+    patient_cycle VARCHAR(100) NOT NULL,
+    staff_cycle VARCHAR(100) NOT NULL,
+    patient_totals JSONB DEFAULT '{}' NOT NULL,
+    staff_breakfast INTEGER DEFAULT 0 NOT NULL,
+    staff_lunch INTEGER DEFAULT 0 NOT NULL,
+    staff_dinner INTEGER DEFAULT 0 NOT NULL,
+    soup_count INTEGER DEFAULT 0 NOT NULL,
+    kanda_count INTEGER DEFAULT 0 NOT NULL,
+    pol_sambola_count INTEGER DEFAULT 0 NOT NULL,
+    special_counts JSONB DEFAULT '{}' NOT NULL,
+    extras_totals JSONB DEFAULT '{}' NOT NULL,
+    custom_extras_totals JSONB DEFAULT '[]' NOT NULL,
+    status VARCHAR(30) DEFAULT 'calculated' NOT NULL,
+    calculated_by INTEGER REFERENCES users(id),
+    calculated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE purchase_orders (
+    id SERIAL PRIMARY KEY,
+    calc_run_id INTEGER NOT NULL REFERENCES calculation_runs(id),
+    po_date DATE NOT NULL,
+    bill_number VARCHAR(20),
+    status VARCHAR(30) DEFAULT 'draft' NOT NULL,
+    original_total NUMERIC(14,2) DEFAULT 0 NOT NULL,
+    revised_total NUMERIC(14,2),
+    created_by INTEGER REFERENCES users(id),
+    submitted_at TIMESTAMPTZ,
+    submitted_by INTEGER REFERENCES users(id),
+    reviewed_at TIMESTAMPTZ,
+    reviewed_by INTEGER REFERENCES users(id),
+    rejection_reason TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE po_items (
+    id SERIAL PRIMARY KEY,
+    po_id INTEGER NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id),
+    category_id INTEGER NOT NULL REFERENCES categories(id),
+    quantity NUMERIC(14,4) DEFAULT 0 NOT NULL,
+    unit VARCHAR(30) NOT NULL,
+    unit_price NUMERIC(12,2) DEFAULT 0 NOT NULL,
+    default_price NUMERIC(12,2) DEFAULT 0 NOT NULL,
+    total_price NUMERIC(14,2) DEFAULT 0 NOT NULL,
+    is_price_changed BOOLEAN DEFAULT false,
+    for_breakfast BOOLEAN DEFAULT false,
+    for_lunch BOOLEAN DEFAULT false,
+    for_dinner BOOLEAN DEFAULT false,
+    for_extra BOOLEAN DEFAULT false,
+    for_kanda BOOLEAN DEFAULT false,
+    revised_qty NUMERIC(14,4),
+    revised_price NUMERIC(12,2),
+    revised_total NUMERIC(14,2),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE invoices (
+    id SERIAL PRIMARY KEY,
+    po_id INTEGER NOT NULL REFERENCES purchase_orders(id),
+    invoice_number VARCHAR(100) NOT NULL,
+    invoice_date DATE NOT NULL,
+    status VARCHAR(30) DEFAULT 'pending_receipt' NOT NULL,
+    billed_total NUMERIC(14,2) DEFAULT 0,
+    received_by INTEGER REFERENCES users(id),
+    received_at TIMESTAMPTZ,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE invoice_items (
+    id SERIAL PRIMARY KEY,
+    invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+    po_item_id INTEGER NOT NULL REFERENCES po_items(id),
+    item_id INTEGER NOT NULL REFERENCES items(id),
+    ordered_qty NUMERIC(14,4) DEFAULT 0 NOT NULL,
+    received_qty NUMERIC(14,4) DEFAULT 0 NOT NULL,
+    unit_price NUMERIC(12,2) DEFAULT 0 NOT NULL,
+    total_price NUMERIC(14,2) DEFAULT 0 NOT NULL,
+    status VARCHAR(30) DEFAULT 'pending' NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE audit_logs (
+    id BIGSERIAL PRIMARY KEY,
+    timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    user_id BIGINT,
+    user_name VARCHAR(255),
+    user_role VARCHAR(100),
+    action VARCHAR(150) NOT NULL,
+    entity VARCHAR(150),
+    entity_id VARCHAR(100),
+    old_value JSONB,
+    new_value JSONB,
+    details JSONB,
+    severity VARCHAR(50) DEFAULT 'info',
+    status_code INTEGER,
+    success BOOLEAN DEFAULT true
+);

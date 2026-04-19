@@ -1,3 +1,5 @@
+// Admin interface for managing diet cycles
+
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,12 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-// 👇 Removed Trash2 and added CheckCircle and Ban for better UX
-import { Plus, Edit2, Ban, CheckCircle } from "lucide-react";
+import { Plus, Edit2, Ban, CheckCircle } from "lucide-react"; 
 
 const API_BASE = `${import.meta.env.VITE_API_BASE || "http://localhost:5050/api"}/diet-cycles`;
 
-const getAuthHeaders = () => {
+// Helper to get auth headers for API requests
+const getAuthHeaders = () => { 
   const token = sessionStorage.getItem("token");
   return {
     "Content-Type": "application/json",
@@ -20,33 +22,35 @@ const getAuthHeaders = () => {
   };
 };
 
-// 👇 Added rich theme colors for consistency
+// Rich theme colors for consistency
 const STATUS_STYLE = {
   active: "bg-success text-success-foreground hover:bg-success border-transparent font-medium",
   inactive: "bg-error-bg text-destructive hover:bg-error-bg border-transparent font-medium",
 };
 
 const AdminDietCycles = () => {
-  const { toast } = useToast();
-  
-  const [cycles, setCycles] = useState([]);
-  const [edit, setEdit] = useState(null);
-  const [isNew, setIsNew] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();   // For showing success/error messages
+  const [cycles, setCycles] = useState([]); // List of diet cycles
+  const [edit, setEdit] = useState(null); // Currently edited cycle (null if none)
+  const [isNew, setIsNew] = useState(false); // Flag to indicate if we're adding a new cycle or editing an existing one 
+  const [loading, setLoading] = useState(true); // Track if data is loading
+  const [saving, setSaving] = useState(false); // Track if save operation is in progress
 
+  // Fetch diet cycles from API
   const fetchCycles = async () => {
-    try {
+    try { 
       setLoading(true);
-      const res = await fetch(API_BASE, {
+      const res = await fetch(API_BASE, {  // Get all diet cycles
         headers: getAuthHeaders(),
       });
-      const data = await res.json();
+
+      const data = await res.json(); 
 
       if (!res.ok) throw new Error(data.message || "Failed to fetch diet cycles");
-
       setCycles(data.cycles || []);
-    } catch (error) {
+    } 
+  // Show error toast if fetch fails
+    catch (error) {
       toast({
         title: "Error",
         description: error.message || "Could not load diet cycles",
@@ -56,30 +60,31 @@ const AdminDietCycles = () => {
       setLoading(false);
     }
   };
-
+  // Fetch cycles on component mount
   useEffect(() => {
     fetchCycles();
   }, []);
 
-  const openNew = () => {
+  // Open dialog for adding new cycle
+  const openNew = () => {  
     setIsNew(true);
     setEdit({ code: "", nameEn: "", nameSi: "", active: true });
   };
 
-  const save = async () => {
+  const save = async () => { // Save new or edited cycle to API
     if (!edit) return;
 
     try {
       setSaving(true);
       
-      const payload = {
+      const payload = { // Only send relevant fields in the payload
         code: edit.code,
         nameEn: edit.nameEn,
         nameSi: edit.nameSi,
         active: edit.active
       };
 
-      let res;
+      let res; // Response variable to hold the result of either POST or PUT request
       if (isNew) {
         res = await fetch(API_BASE, {
           method: "POST",
@@ -94,7 +99,7 @@ const AdminDietCycles = () => {
         });
       }
 
-      const data = await res.json();
+      const data = await res.json(); // Parse response
 
       if (!res.ok) throw new Error(data.message || "Save failed");
 
@@ -116,16 +121,16 @@ const AdminDietCycles = () => {
       setSaving(false);
     }
   };
-
-  const toggleStatus = async (cycle) => {
+ 
+  const toggleStatus = async (cycle) => { // Toggle active/inactive status of a cycle
     try {
-      const res = await fetch(`${API_BASE}/${cycle.id}/status`, {
+      const res = await fetch(`${API_BASE}/${cycle.id}/status`, { // Endpoint to toggle status
         method: "PATCH",
         headers: getAuthHeaders(),
         body: JSON.stringify({ active: !cycle.active }),
       });
 
-      const data = await res.json();
+      const data = await res.json(); // Parse response
 
       if (!res.ok) throw new Error(data.message || "Status update failed");
 
@@ -144,7 +149,7 @@ const AdminDietCycles = () => {
     }
   };
 
-  // 👇 Sort cycles: Active at the top, Inactive at the bottom
+  // Sort cycles, Active at the top, Inactive at the bottom
   const sortedCycles = [...cycles].sort((a, b) => {
     if (a.active && !b.active) return -1;
     if (!a.active && b.active) return 1;
@@ -205,7 +210,7 @@ const AdminDietCycles = () => {
                           <Edit2 className="h-5 w-5" />
                         </Button>
                         
-                        {/* 👇 Updated to dynamically switch activation icons */}
+                        {/* Updated to dynamically switch activation icons */}
                         <Button 
                           title={c.active ? "Deactivate Cycle" : "Activate Cycle"}
                           variant="ghost" 

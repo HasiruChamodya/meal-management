@@ -1,6 +1,6 @@
 const itemsModel = require("../models/itemsModel");
 
-/* GET ITEMS */
+// GET /api/items
 exports.getItems = async (req, res) => {
   try {
     const items = await itemsModel.getItems();
@@ -11,7 +11,7 @@ exports.getItems = async (req, res) => {
   }
 };
 
-/* CREATE ITEM */
+// POST /api/items
 exports.createItem = async (req, res) => {
   try {
     const item = await itemsModel.createItem(req.body);
@@ -27,7 +27,7 @@ exports.createItem = async (req, res) => {
   }
 };
 
-/* UPDATE ITEM */
+// PUT /api/items/:id
 exports.updateItem = async (req, res) => {
   try {
     const { id } = req.params;
@@ -45,7 +45,7 @@ exports.updateItem = async (req, res) => {
   }
 };
 
-/* DELETE ITEM */
+// DELETE /api/items/:id
 exports.deleteItem = async (req, res) => {
   try {
     const { id } = req.params;

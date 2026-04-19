@@ -4,15 +4,7 @@ const { writeAudit } = require("../utils/audit");
 const nodemailer = require("nodemailer");
 const PDFDocument = require("pdfkit");
 
-// ──────────────────────────────────────────────
-// Subject Clerk endpoints
-// ──────────────────────────────────────────────
-
-/**
- * POST /api/orders
- * Create a new draft PO from selected items
- * Body: { date, calcRunId, items: [{ itemId, categoryId, quantity, unit, unitPrice, defaultPrice, forBreakfast, ... }] }
- */
+// POST /api/purchase-orders
 exports.createOrder = async (req, res) => {
   try {
     const { date, calcRunId, items } = req.body;
@@ -67,10 +59,7 @@ exports.createOrder = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/orders/:id
- * Update a draft PO (re-select items)
- */
+// PUT /api/purchase-orders/:id
 exports.updateOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -103,10 +92,7 @@ exports.updateOrder = async (req, res) => {
   }
 };
 
-/**
- * POST /api/orders/:id/submit
- * Submit a draft PO for accountant approval (draft → pending)
- */
+// POST /api/purchase-orders/:id/submit
 exports.submitOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -137,10 +123,7 @@ exports.submitOrder = async (req, res) => {
   }
 };
 
-/**
- * POST /api/orders/:id/revise
- * Revise a rejected PO back to draft (rejected → draft)
- */
+// POST /api/purchase-orders/:id/revise
 exports.reviseOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -169,15 +152,7 @@ exports.reviseOrder = async (req, res) => {
   }
 };
 
-// ──────────────────────────────────────────────
-// Accountant endpoints
-// ──────────────────────────────────────────────
-
-/**
- * POST /api/orders/:id/approve
- * Approve a pending PO (pending → approved)
- * Body: { revisions: { itemId: { qty, price }, ... } }  (optional)
- */
+// POST /api/purchase-orders/:id/approve
 exports.approveOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -212,11 +187,7 @@ exports.approveOrder = async (req, res) => {
   }
 };
 
-/**
- * POST /api/orders/:id/reject
- * Reject a pending PO (pending → rejected)
- * Body: { reason: "..." }
- */
+// GET /api/purchase-orders?status=pending
 exports.rejectOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -252,14 +223,7 @@ exports.rejectOrder = async (req, res) => {
   }
 };
 
-// ──────────────────────────────────────────────
-// Shared query endpoints
-// ──────────────────────────────────────────────
-
-/**
- * GET /api/orders
- * List all POs (with optional ?status= filter)
- */
+// GET /api/purchase-orders
 exports.getOrders = async (req, res) => {
   try {
     const { status } = req.query;
@@ -278,10 +242,7 @@ exports.getOrders = async (req, res) => {
   }
 };
 
-/**
- * GET /api/orders/:id
- * Get a single PO with all line items grouped by category
- */
+// GET /api/purchase-orders/:id
 exports.getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -298,10 +259,7 @@ exports.getOrderById = async (req, res) => {
   }
 };
 
-/**
- * GET /api/orders/by-date?date=YYYY-MM-DD
- * Get PO for a specific date (used by CalculationResults "Generate PO" button)
- */
+// GET /api/purchase-orders/by-date?date=YYYY-MM-DD
 exports.getOrderByDate = async (req, res) => {
   try {
     const { date } = req.query;
@@ -315,10 +273,7 @@ exports.getOrderByDate = async (req, res) => {
   }
 };
 
-/**
- * GET /api/orders/pending
- * Get all pending POs for accountant approval queue
- */
+// GET /api/purchase-orders/pending
 exports.getPendingOrders = async (req, res) => {
   try {
     const orders = await poModel.getPurchaseOrdersByStatus("pending");
@@ -329,10 +284,7 @@ exports.getPendingOrders = async (req, res) => {
   }
 };
 
-/**
- * POST /api/orders/:id/email
- * Send the Purchase Order to the supplier via email
- */
+// GET /api/purchase-orders/:id/downloadpdf
 exports.emailPurchaseOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -342,13 +294,13 @@ exports.emailPurchaseOrder = async (req, res) => {
       return res.status(400).json({ message: "Email address is required" });
     }
 
-    // 1. Fetch the PO details so we can include the Bill Number in the subject
+    // Fetch the PO details so we can include the Bill Number in the subject
     const po = await poModel.getPurchaseOrderById(id);
     if (!po) {
       return res.status(404).json({ message: "Purchase order not found" });
     }
 
-    // 2. Configure NodeMailer Transporter
+    // Configure NodeMailer Transporter
     // Make sure you have EMAIL_USER and EMAIL_APP_PASSWORD in your .env file
     const transporter = nodemailer.createTransport({
       service: 'gmail', 
@@ -358,7 +310,7 @@ exports.emailPurchaseOrder = async (req, res) => {
       }
     });
 
-    // 3. Define the Email content
+    // Define the Email content
     const mailOptions = {
       from: `"Gampaha District General Hospital" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -366,10 +318,10 @@ exports.emailPurchaseOrder = async (req, res) => {
       text: `Dear Manager,\n\nPlease find the details for Purchase Order #${po.bill_number || po.billNumber} attached or accessible via your supplier portal.\n\nDate: ${po.po_date || po.date}\nTotal Items: ${po.itemCount}\n\nThank you,\nGampaha District General Hospital`,
     };
 
-    // 4. Send the Email
+    // Send the Email
     await transporter.sendMail(mailOptions);
 
-    // 5. Optional: Write to audit log that an email was sent
+    // Optional: Write to audit log that an email was sent
     await writeAudit({
       req,
       action: "EMAIL_PO",
@@ -389,10 +341,7 @@ exports.emailPurchaseOrder = async (req, res) => {
   }
 };
 
-/**
- * POST /api/orders/:id/email
- * Generate PDF and send the Purchase Order to the supplier via email
- */
+// GET /api/purchase-orders/:id/downloadpdf
 exports.emailPurchaseOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -402,7 +351,7 @@ exports.emailPurchaseOrder = async (req, res) => {
       return res.status(400).json({ message: "Email address is required" });
     }
 
-    // 1. Fetch the PO Details
+    //Fetch the PO Details
     const po = await poModel.getPurchaseOrderById(id);
     if (!po) {
       return res.status(404).json({ message: "Purchase order not found" });
@@ -414,7 +363,7 @@ exports.emailPurchaseOrder = async (req, res) => {
       itemsList = po.categories.flatMap((cat) => cat.items || []);
     }
 
-    // 2. GENERATE PDF IN-MEMORY
+    // GENERATE PDF IN-MEMORY
     const pdfBuffer = await new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50 });
       const buffers = [];
@@ -424,12 +373,12 @@ exports.emailPurchaseOrder = async (req, res) => {
       doc.on("end", () => resolve(Buffer.concat(buffers)));
       doc.on("error", reject);
 
-      // --- Draw Header ---
+      // Draw Header 
       doc.fontSize(20).text("PURCHASE ORDER", { align: "center" });
       doc.fontSize(10).fillColor("gray").text("Gampaha District General Hospital", { align: "center" });
       doc.moveDown(2);
 
-      // --- Draw Info ---
+      // Draw Info
       doc.fillColor("black").fontSize(12);
       doc.font("Helvetica-Bold").text("To:");
       doc.font("Helvetica").text("Manager,");
@@ -442,7 +391,7 @@ exports.emailPurchaseOrder = async (req, res) => {
       doc.font("Helvetica-Bold").text(`Status: `, { continued: true }).font("Helvetica").text((po.status || "").toUpperCase());
       doc.moveDown(2);
 
-      // --- Draw Table Header ---
+      // Draw Table Header 
       let top = doc.y;
       doc.font("Helvetica-Bold");
       doc.text("Item", 50, top);
@@ -453,7 +402,7 @@ exports.emailPurchaseOrder = async (req, res) => {
       doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("black").stroke();
       doc.moveDown(0.5);
 
-      // --- Draw Table Rows ---
+      // Draw Table Rows 
       itemsList.forEach((item) => {
         // Auto page-break protection for large orders
         if (doc.y > 700) {
@@ -481,7 +430,7 @@ exports.emailPurchaseOrder = async (req, res) => {
         doc.moveDown(0.5);
       });
 
-      // --- Draw Grand Total ---
+      // Draw Grand Total 
       doc.moveDown(2);
       const grandTotal = po.revisedTotal !== null && po.revisedTotal !== undefined 
           ? Number(po.revisedTotal) 
@@ -493,7 +442,7 @@ exports.emailPurchaseOrder = async (req, res) => {
       doc.end();
     });
 
-    // 3. CONFIGURE EMAIL
+    //  CONFIGURE EMAIL
     const transporter = nodemailer.createTransport({
       service: 'gmail', 
       auth: {
@@ -502,7 +451,7 @@ exports.emailPurchaseOrder = async (req, res) => {
       }
     });
 
-    // 4. ATTACH PDF AND SEND
+    // ATTACH PDF AND SEND
     const mailOptions = {
       from: `"Gampaha District General Hospital" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -526,10 +475,7 @@ exports.emailPurchaseOrder = async (req, res) => {
   }
 };
 
-/**
- * GET /api/orders/:id/pdf
- * Generate and download the Purchase Order PDF directly
- */
+// GET /api/purchase-orders/:id/downloadpdf
 exports.downloadPurchaseOrderPDF = async (req, res) => {
   try {
     const { id } = req.params;
@@ -555,12 +501,12 @@ exports.downloadPurchaseOrderPDF = async (req, res) => {
     // Pipe the PDF directly to the HTTP response!
     doc.pipe(res);
 
-    // --- Draw Header ---
+    // Draw Header 
     doc.fontSize(20).text("PURCHASE ORDER", { align: "center" });
     doc.fontSize(10).fillColor("gray").text("Gampaha District General Hospital", { align: "center" });
     doc.moveDown(2);
 
-    // --- Draw Info ---
+    // Draw Info 
     doc.fillColor("black").fontSize(12);
     doc.font("Helvetica-Bold").text("To:");
     doc.font("Helvetica").text("Manager,");
@@ -573,7 +519,7 @@ exports.downloadPurchaseOrderPDF = async (req, res) => {
     doc.font("Helvetica-Bold").text(`Status: `, { continued: true }).font("Helvetica").text((po.status || "").toUpperCase());
     doc.moveDown(2);
 
-    // --- Draw Table Header ---
+    // Draw Table Header
     let top = doc.y;
     doc.font("Helvetica-Bold");
     doc.text("Item", 50, top);
@@ -584,7 +530,7 @@ exports.downloadPurchaseOrderPDF = async (req, res) => {
     doc.moveTo(50, doc.y).lineTo(550, doc.y).strokeColor("black").stroke();
     doc.moveDown(0.5);
 
-    // --- Draw Table Rows ---
+    // Draw Table Rows 
     itemsList.forEach((item) => {
       if (doc.y > 700) {
         doc.addPage();
@@ -610,7 +556,7 @@ exports.downloadPurchaseOrderPDF = async (req, res) => {
       doc.moveDown(0.5);
     });
 
-    // --- Draw Grand Total ---
+    // Draw Grand Total 
     doc.moveDown(2);
     const grandTotal = po.revisedTotal !== null && po.revisedTotal !== undefined 
         ? Number(po.revisedTotal) 

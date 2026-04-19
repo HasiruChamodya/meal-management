@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 
+// Middleware to protect routes and check user roles
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
@@ -15,6 +16,7 @@ function requireAuth(req, res, next) {
   }
 }
 
+// Middleware to check if user has required role(s)
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user?.role) return res.status(403).json({ message: "Forbidden" });

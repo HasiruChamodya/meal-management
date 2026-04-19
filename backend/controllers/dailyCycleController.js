@@ -56,7 +56,9 @@ exports.setDailyCycle = async (req, res) => {
       message: "Daily meal cycle saved successfully",
       cycle: newCycle,
     });
-  } catch (error) {
+  } 
+  // Catch any unexpected errors and log them in the audit trail with severity "error"
+  catch (error) {
     console.error("SET DAILY CYCLE ERROR:", error);
 
     await writeAudit({
