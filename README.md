@@ -1,29 +1,61 @@
+# Hospital Meal Management System 🏥
 
-### 1. The Diet Clerk Journey (Data Ingestion)
-The Diet Clerk is the primary data entry point for the hospital's daily operations. Their workflow is focused entirely on the frontend UI and the `census_entries` table.
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
+![Express.js](https://img.shields.io/badge/Express.js-404D59?style=for-the-badge)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
 
-* **The Task:** Every morning, the Diet Clerk logs into the React frontend and inputs the patient headcount for each specific ward (e.g., Ward 01, Ward 02) broken down by diet type (Normal, Diabetic, High Protein, Liquid).
-* **The Backend Process:** When they click "Submit," the frontend sends a `POST` request to the backend. The controller validates the numbers, ensures no duplicate entries exist for that ward on that specific date, and saves the raw data into the PostgreSQL `census_entries` table. 
-* **The State:** The system status for that day remains "Pending" until all wards have submitted their counts.
+A comprehensive, full-stack web application designed to digitize and automate the dietary calculation and meal management processes for hospital kitchens. This system replaces legacy, error-prone Excel-based workflows with a streamlined, centralized platform.
 
-### 2. The Kitchen Manager / Subject Clerk Journey (The Calculation)
-Once the raw patient numbers are in the system, the administrative staff triggers the heavy lifting.
+---
 
-* **The Task:** They review the aggregated ward data and initiate the Daily Calculation.
-* **The Backend Process:** This triggers the `calculationController` we discussed earlier. The Node.js engine pulls the active menu cycle (e.g., Chicken or Fish), fetches the `norm_weights` (e.g., 150g rice per person), applies medical diet overrides, and executes the math using the `uom.js` base units.
-* **The Output:** The final matrix of ingredients is stored as a JSON payload inside the `calculation_runs` table, freezing the data in place so it cannot be accidentally altered if a late ward submits a change.
+## 📖 Overview
 
-### 3. The Accountant Journey (Financial Approval)
-The Accountant is isolated from the daily ward counts and recipes; they only care about the final procurement numbers and vendor costs.
+In large healthcare facilities, accurately calculating meal requirements and raw ingredient volumes based on fluctuating daily patient censuses is a complex logistical challenge. 
 
-* **The Task:** The Accountant views the output of the calculation engine, which the system automatically formats into a Draft Purchase Order (PO). 
-* **The Backend Process:** The frontend pulls the finalized data and the current market prices for each ingredient (e.g., the cost of 1 Kg of Nadu Rice). The system calculates the total financial cost for the day's meals.
-* **The Approval:** When the Accountant clicks "Approve," the backend updates the `purchase_orders` table status to "Approved" and logs the exact timestamp and the Accountant's user ID into the `audit_logs` table for strict financial compliance.
+This system aggregates daily patient dietary requirements and automates the underlying business logic for ingredient calculations. By utilizing a robust calculation engine, it ensures exact raw material purchasing, minimizes food waste, and significantly reduces the administrative burden on hospital staff.
 
-### 4. The System Administrator Journey (Configuration)
-The Admin manages the rules that dictate how the rest of the system behaves.
+## ✨ Key Features
 
-* **The Task:** They manage user accounts, reset passwords, define the rotating menu cycles (Week 1, Week 2), and update the master ingredient lists.
-* **The Backend Process:** Actions taken by the Admin usually hit configuration tables like `users`, `diet_cycles`, or `items`. Because Admin actions can drastically alter the entire hospital's workflow, every single POST, PUT, or DELETE request they make is heavily tracked by the `writeAudit()` function.
+* **Automated Ingredient Calculation:** Dynamically converts daily patient headcounts and specific dietary requirements into exact raw ingredient measurements.
+* **Modern, Minimalist UI:** A clean, professional interface utilizing a minimalist green color palette and the highly legible *Inter* font, designed for fast data entry and low cognitive load for hospital staff.
+* **Legacy System Modernization:** Fully replaces manual, decentralized Excel spreadsheets with a centralized database architecture.
+* **RESTful API Architecture:** Seamless and secure data flow between the client and server.
 
-To keep utilizing the active recall methodology, which of these four specific user journeys would you like to tear down next?
+## 🛠️ Tech Stack
+
+**Frontend**
+* React.js
+* CSS (Custom minimalist UI with green theming and Inter font)
+
+**Backend**
+* Node.js
+* Express.js
+
+**Database**
+* PostgreSQL (Relational data modeling for complex meal, patient, and ingredient relationships)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+* Node.js (v16 or higher)
+* PostgreSQL installed and running locally
+* Git
+
+### 1. Database Setup
+1. Create a new PostgreSQL database named `hospital_meals`.
+2. Run the provided SQL schema file to generate the required tables.
+
+### 2. Backend Setup
+```bash
+# Navigate to the backend directory
+cd backend
+
+# Install dependencies
+npm install
+
+# Create a .env file and configure your database credentials
+# Start the development server
+npm run dev
